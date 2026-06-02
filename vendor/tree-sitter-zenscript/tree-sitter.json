@@ -1,0 +1,33 @@
+{
+  "grammars": [
+    {
+      "name": "zenscript",
+      "camelcase": "zenScript",
+      "title": "ZenScript",
+      "scope": "source.zenscript",
+      "file-types": ["zs", "zsrc"],
+      "highlights": "queries/highlights.scm"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "ZenScript grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "ZenScript Toolkit Contributors"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/zenscript-toolkit/zed-zenscript-toolkit"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": false,
+    "node": false,
+    "python": false,
+    "rust": true,
+    "swift": false
+  }
+}

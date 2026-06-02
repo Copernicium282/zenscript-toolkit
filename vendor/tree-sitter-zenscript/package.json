@@ -1,0 +1,29 @@
+{
+  "name": "tree-sitter-zenscript",
+  "version": "1.0.0",
+  "description": "zenscript grammar for the tree-sitter parsing library",
+  "main": "bindings/node",
+  "scripts": {
+    "test": "tree-sitter test",
+    "generate": "tree-sitter generate",
+    "retest": "npm run generate && npm run test",
+    "local-test": "nr generate && tree-sitter parse test.txt"
+  },
+  "keywords": [
+    "tree-sitter",
+    "zenscript",
+    "crafttweaker",
+    "parser",
+    "lexer"
+  ],
+  "author": "ikexing<ikexing@qq.com>",
+  "license": "MIT",
+  "dependencies": {
+    "nan": "^2.17.0",
+    "tree-sitter-cli": "^0.20.8"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^0.40.2",
+    "eslint": "^8.47.0"
+  }
+}
