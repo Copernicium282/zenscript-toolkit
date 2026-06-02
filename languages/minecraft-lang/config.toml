@@ -1,0 +1,22 @@
+name = "Minecraft Lang"
+grammar = "properties"
+path_suffixes = ["lang"]
+line_comments = ["#"]
+
+[[brackets]]
+start = "{"
+end = "}"
+close = true
+newline = true
+
+[[brackets]]
+start = "["
+end = "]"
+close = true
+newline = true
+
+[[brackets]]
+start = "("
+end = ")"
+close = true
+newline = true
