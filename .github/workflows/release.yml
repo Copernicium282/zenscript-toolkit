@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            archive: gz
+          - target: aarch64-unknown-linux-gnu
+            os: ubuntu-22.04-arm
+            archive: gz
+          - target: x86_64-apple-darwin
+            os: macos-13
+            archive: gz
+          - target: aarch64-apple-darwin
+            os: macos-14
+            archive: gz
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            archive: none
+          - target: aarch64-pc-windows-msvc
+            os: windows-11-arm
+            archive: none
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Build release binary
+        working-directory: lsp-server
+        run: cargo build --release --target ${{ matrix.target }} --bin zsbc-lsp
+
+      - name: Strip debug symbols (unix)
+        if: matrix.archive == 'gz'
+        run: |
+          strip "target/${{ matrix.target }}/release/zsbc-lsp"
+
+      - name: Package (unix)
+        if: matrix.archive == 'gz'
+        run: |
+          cd "target/${{ matrix.target }}/release"
+          tar -czf "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.tar.gz" zsbc-lsp
+
+      - name: Package (windows)
+        if: matrix.archive == 'none'
+        shell: bash
+        run: |
+          mv "target/${{ matrix.target }}/release/zsbc-lsp.exe" "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.exe"
+
+      - name: Upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            zsbc-lsp-${{ matrix.target }}.tar.gz
+            zsbc-lsp-${{ matrix.target }}.exe
+          fail_on_unmatched_files: true
