@@ -149,3 +149,68 @@ All settings are read from the `zsbc` key in `.zed/settings.json`:
 | `onlyCompleteBrackets`         | `boolean` | `true`  | Only trigger completions after `<…:`. Set to `false` to also complete unbracketed identifiers.       |
 | `completionSuggestAllItems`    | `boolean` | `false` | Show every known item regardless of the typed prefix. Off by default because large modpacks lag.     |
 | `completionSuggestWithStart`   | `boolean` | `false` | Only show items whose key starts with the typed prefix. Stricter than the default substring match.   |
+
+## Limitations
+
+### ZsLint integration
+
+The original ZsLint VSCode extension communicated with a long-archived,
+unmaintained WebSocket service (`ws://127.0.0.1:24532`, subprotocol
+`zslint`) that has been dead for years. This extension does not ship a
+linter.
+
+### Minecraft format codes
+
+Minecraft `.lang` files embed colour and style codes such as `§a`
+(green), `§l` (bold), and `§r` (reset) directly inside string values.
+The underlying `tree-sitter-properties` grammar tokenises the value as
+a flat stream of per-character nodes, so individual format codes do not
+receive dedicated captures. They inherit the value's `@string` styling
+and can still be spotted visually by looking for the `§` character.
+
+### ZSBC requires a one-off Minecraft run
+
+The completion feature is only as good as the data the dumper produces.
+The first time you set up a modpack, you must launch Minecraft once
+with CraftTweaker and the bundled dumper script installed; subsequent
+edits in Zed are then fully offline.
+
+### Preprocessor directives
+
+CraftTweaker supports preprocessor directives like `#priority`,
+`#loader`, `#modloaded`, `#sideonly`, and `#ikwid` at the top of files.
+The tree-sitter grammar tokenises these as comments due to a regex
+precedence limitation. The semantics (which scripts load first, which
+client vs. server side) are unaffected; the only impact is cosmetic
+highlighting.
+
+## License
+
+MIT — see [`LICENSE`](LICENSE).
+
+Third-party:
+
+- `vendor/tree-sitter-zenscript/` — MIT (upstream `ikexing-cn`),
+  with our additions under the same MIT license as this extension.
+- `dumpers/dumper_*.zs` — MIT, from
+  `Blue-Beaker/zenscript-bracket-completion`.
+- `tree-sitter-properties` — MIT.
+- The `lsp-server` and `lsp-types` crates used by `zsbc-lsp` are MIT.
+
+## Tested on
+
+The grammar and LSP have been validated against:
+
+- The full
+  [Nuclear Tech: Reborn modpack](https://www.curseforge.com/minecraft/modpacks/nuclear-tech-reborn/files/7442534)
+  — 32 `.zs` files, ~70 KB, mix of CraftTweaker and NuclearCraft
+  recipes, JEI integration, and complex expressions — all parse
+  with **zero ERROR nodes** against the vendored grammar.
+- Four additional sanitized real-world fixture scripts covering
+  recipe remapping, waste processing, fluid mechanics, and alloy
+  crafting — all parse with **zero ERROR nodes**.
+- A 30-entry ZSBC dumper block, exercising every `parse_ct_log`
+  branch (last-block wins, missing block, additional list merges).
+
+Result: grammar is fit for real CraftTweaker code; ZSBC server reads
+real dumper output.
