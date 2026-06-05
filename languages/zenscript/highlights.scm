@@ -1,27 +1,13 @@
 ; ZenScript — syntax highlighting queries.
 ;
 ; Grammar: Copernicium282/tree-sitter-zenscript (fork of ikexing-cn)
-;   grammar.js is the source of truth for node names; node-types.json
-;   is the source of truth for field names. The queries below use
-;   `field: (_)` to address fields, not `(field)`, which would try
-;   to match a non-existent named node.
+; VS Code TextMate grammar: yesterday17.zenscript-0.2.10
 ;
-; Capture names are chosen to reproduce the colors VS Code's
-; yesterday17/zenscript grammar gives when rendered under the
-; 2026 Dark theme. The mapping is documented inline next to each
-; pattern, e.g. `import_declaration` assigns `keyword.other.import`
-; in TextMate, which falls back to `keyword` (#ff7b72) in 2026 Dark,
-; so the capture here is `@keyword.import`.
-;
-; IMPORTANT: tree-sitter applies captures with LAST-MATCH-WINS
-; semantics — if multiple patterns match the same node, the one
-; appearing later in the file takes effect. The generic
-; `(identifier) @variable` catch-all is therefore placed at the
-; TOP of the file so the more specific captures below (e.g.
-; `class_declaration` naming its `@type`) override it.
+; This maps tree-sitter nodes to capture names that reproduce the VS Code
+; 2026 Dark theme colors. Last matching pattern wins; specific patterns go
+; AFTER catch-all to override it.
 
 ; --- Identifiers (catch-all) -----------------------------------------------
-; Painted first so the more specific captures below override it.
 (identifier) @variable
 
 ; --- Comments --------------------------------------------------------------
@@ -38,10 +24,22 @@
     name: (identifier) @namespace))
 
 (import_declaration
-  (as) @keyword.operator)
+  (qualified_name
+    scope: (identifier) @namespace))
 
 (import_declaration
-  (identifier) @namespace)
+  (qualified_name
+    scope: (qualified_name
+      name: (identifier) @namespace)))
+
+(import_declaration
+  (as) @keyword.operator)
+
+; --- Version preprocessor-style statement ----------------------------------
+; `version` is part of `meta.preprocessor.zenscript` (VS Code) → falls
+; back to `meta.preprocessor` → @preproc (#569cd6).
+(version_statement
+  "version" @preproc)
 
 ; --- Classes ---------------------------------------------------------------
 ; `zenClass` / `frigginClass` are `keyword.other.class.zenscript` (VS Code)
@@ -85,45 +83,26 @@
 ; `if`/`else` are `keyword.control.conditional.zenscript` (VS Code) → falls
 ; back to `keyword.control` → @keyword.control.conditional (#c586c0).
 (if_statement
-  [
-    "if"
-    "else"
-  ] @keyword.control.conditional)
+  ["if" "else"] @keyword.control.conditional)
 
 (foreach_statement
-  [
-    "for"
-    "in"
-  ] @keyword.control)
+  ["for" "in"] @keyword.control)
 
 (while_statement
   "while" @keyword.control)
 
-[
-  "return"
-  "break"
-  "continue"
-] @keyword.control.return
-
-; --- Version preprocessor-style statement ----------------------------------
-; `version` is part of `meta.preprocessor.zenscript` (VS Code) → falls back
-; to `meta.preprocessor` → @preproc (#569cd6).
-(version_statement
-  "version" @preproc)
+["return" "break" "continue"] @keyword.control.return
 
 ; --- Variable declarations -------------------------------------------------
 ; `var`/`val` are `storage.type.var` (VS Code) → falls back to `storage`
-; → @keyword.declaration (#ff7b72). `static`/`global` are
+; → @keyword.declaration (#ff7b72). `static`/`global`/ are
 ; `storage.modifier.{static,global}` → `storage.modifier` (no language-
 ; specific override) → @keyword.declaration (#ff7b72) — VS Code would
 ; render these #569cd6, but the closest semantically-correct capture
 ; here maps to the same generic-storage color the rest of the prefix
 ; group gets.
 (variable_declaration
-  prefix: [
-    "var"
-    "val"
-  ] @keyword.declaration
+  prefix: ["var" "val"] @keyword.declaration
   name: (identifier) @variable)
 
 (variable_declaration
@@ -237,33 +216,17 @@
 
 ; Ternary
 (ternary_expression
-  [
-    "?"
-    ":"
-  ] @keyword.control.ternary)
+  ["?" ":"] @keyword.control.ternary)
 
 ; Assignment
 (assignment_expression
-  operator: [
-    "%=" "&=" "*=" "+=" "-=" "/=" "=" "^=" "|=" "~="
-  ] @operator)
+  operator: ["%=" "&=" "*=" "+=" "-=" "/=" "=" "^=" "|=" "~="] @operator)
 
 ; Unary
 (unary_expression
   operator: ["!" "-"] @operator)
 
 ; --- Brackets / punctuation ------------------------------------------------
-[
-  "{"
-  "}"
-  "["
-  "]"
-  "("
-  ")"
-] @punctuation.bracket
+["{" "}" "[" "]" "(" ")"] @punctuation.bracket
 
-[
-  ";"
-  ","
-  "."
-] @punctuation.delimiter
+[";" "," "."] @punctuation.delimiter

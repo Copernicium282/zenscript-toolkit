@@ -1,6 +1,6 @@
 id = "zenscript-toolkit"
 name = "ZenScript Toolkit"
-version = "0.1.0"
+version = "0.1.1"
 schema_version = 1
 authors = ["Copernicium282 <Copernicium282@users.noreply.github.com>"]
 description = "ZenScript and Minecraft .lang language support for Zed, with optional ZSBC bracket-handler completions."
