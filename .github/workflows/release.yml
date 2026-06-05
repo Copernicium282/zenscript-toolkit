@@ -11,7 +11,7 @@ permissions:
 jobs:
   build:
     name: Build ${{ matrix.target }}
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
@@ -20,20 +20,21 @@ jobs:
             os: ubuntu-latest
             archive: gz
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-22.04-arm
+            os: ubuntu-latest
             archive: gz
+            cross: aarch64-linux-gnu
           - target: x86_64-apple-darwin
-            os: macos-13
+            os: macos-14
             archive: gz
           - target: aarch64-apple-darwin
             os: macos-14
             archive: gz
           - target: x86_64-pc-windows-msvc
             os: windows-latest
-            archive: none
+            archive: exe
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
-            archive: none
+            archive: exe
 
     steps:
       - uses: actions/checkout@v4
@@ -43,8 +44,25 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
+      - name: Install aarch64-linux-gnu cross-linker
+        if: matrix.cross == 'aarch64-linux-gnu'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+
+      - name: Set up MSVC (windows)
+        if: startsWith(matrix.os, 'windows')
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.target == 'aarch64-pc-windows-msvc' && 'arm64' || 'x64' }}
+
       - name: Build release binary
         working-directory: lsp-server
+        env:
+          MACOSX_DEPLOYMENT_TARGET: "10.15"
+          CC: ${{ matrix.os == 'macos-14' && 'clang' || '' }}
+          CXX: ${{ matrix.os == 'macos-14' && 'clang++' || '' }}
+          CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: ${{ matrix.cross && 'aarch64-linux-gnu-gcc' || '' }}
         run: cargo build --release --target ${{ matrix.target }} --bin zsbc-lsp
 
       - name: Strip debug symbols (unix)
@@ -59,7 +77,7 @@ jobs:
           tar -czf "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.tar.gz" zsbc-lsp
 
       - name: Package (windows)
-        if: matrix.archive == 'none'
+        if: matrix.archive == 'exe'
         shell: bash
         run: |
           mv "target/${{ matrix.target }}/release/zsbc-lsp.exe" "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.exe"
@@ -67,7 +85,6 @@ jobs:
       - name: Upload asset
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            zsbc-lsp-${{ matrix.target }}.tar.gz
-            zsbc-lsp-${{ matrix.target }}.exe
+          files: zsbc-lsp-${{ matrix.target }}.*
           fail_on_unmatched_files: true
+          overwrite_files: true
