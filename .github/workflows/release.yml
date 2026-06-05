@@ -44,11 +44,11 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install aarch64-linux-gnu cross-linker
+      - name: Install aarch64-linux-gnu cross-toolchain
         if: matrix.cross == 'aarch64-linux-gnu'
         run: |
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu
+          sudo apt-get install -y gcc-aarch64-linux-gnu binutils-aarch64-linux-gnu
 
       - name: Set up MSVC (windows)
         if: startsWith(matrix.os, 'windows')
@@ -68,7 +68,8 @@ jobs:
       - name: Strip debug symbols (unix)
         if: matrix.archive == 'gz'
         run: |
-          strip "target/${{ matrix.target }}/release/zsbc-lsp"
+          ${{ matrix.cross && format('{0}-strip', matrix.cross) || 'strip' }} \
+            "target/${{ matrix.target }}/release/zsbc-lsp"
 
       - name: Package (unix)
         if: matrix.archive == 'gz'
