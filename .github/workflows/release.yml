@@ -8,6 +8,9 @@ on:
 permissions:
   contents: write
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -30,14 +33,14 @@ jobs:
             os: macos-14
             archive: gz
           - target: x86_64-pc-windows-msvc
-            os: windows-latest
+            os: windows-2022
             archive: exe
           - target: aarch64-pc-windows-msvc
             os: windows-11-arm
             archive: exe
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -84,7 +87,7 @@ jobs:
           mv "target/${{ matrix.target }}/release/zsbc-lsp.exe" "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.exe"
 
       - name: Upload asset
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: zsbc-lsp-${{ matrix.target }}.*
           fail_on_unmatched_files: true
