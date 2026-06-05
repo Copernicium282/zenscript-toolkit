@@ -26,10 +26,8 @@ not appropriate for a modern editor extension.
 ```
 zenscript-toolkit/                         # this repo (Zed extension)
 ├── extension.toml                         # Zed extension manifest
-├── Cargo.toml                             # workspace manifest
-├── extension/                             # the Zed cdylib extension
-│   ├── Cargo.toml
-│   └── src/lib.rs                         # downloads zsbc-lsp at activation
+├── Cargo.toml                             # workspace + the cdylib crate
+├── src/lib.rs                             # downloads zsbc-lsp at activation
 ├── lsp-server/                            # the ZSBC language server
 │   ├── Cargo.toml
 │   └── src/{main,lsp,parse}.rs
@@ -38,13 +36,14 @@ zenscript-toolkit/                         # this repo (Zed extension)
 │   └── minecraft-lang/{config.toml,highlights.scm}
 ├── dumpers/dumper_112.zs                  # 1.12 dumper (from ZSBC)
 ├── dumpers/dumper_116.zs                  # 1.16+ dumper (from ZSBC)
-├── vendor/tree-sitter-zenscript/          # completed tree-sitter grammar
 └── README.md, LICENSE, CHANGELOG.md
 ```
 
-The repository is a Cargo workspace. The `extension` crate is what Zed
-compiles to a `cdylib`; the `lsp-server` crate is a standalone binary
-that is **not** shipped as part of the extension per the
+The repository is a Cargo workspace. The root `Cargo.toml` is both the
+workspace manifest and the cdylib crate that Zed compiles to `cdylib`
+(at install time, `cargo build --target wasm32-wasip2`); the
+`lsp-server` subdirectory is a workspace member producing a standalone
+binary that is **not** shipped as part of the extension per the
 [Zed extension publishing guidelines](https://zed.dev/docs/extensions/developing-extensions#extension-publishing-prerequisites)
 ("Extensions that intend to provide a language … must not ship the
 language server as part of the extension").
@@ -53,24 +52,24 @@ language server as part of the extension").
 
 | Language   | File extensions | Grammar source                                                                   | Language server                |
 | ---------- | --------------- | -------------------------------------------------------------------------------- | ------------------------------ |
-| ZenScript  | `.zs`, `.zsrc`  | [`ikexing-cn/tree-sitter-zenscript`](https://github.com/ikexing-cn/tree-sitter-zenscript) (vendored, completed) | `zsbc` (downloaded, see below) |
+| ZenScript  | `.zs`, `.zsrc`  | [`Copernicium282/tree-sitter-zenscript`](https://github.com/Copernicium282/tree-sitter-zenscript) (fork of `ikexing-cn`) | `zsbc` (downloaded, see below) |
 | Minecraft  | `.lang`         | [`tree-sitter-grammars/tree-sitter-properties`](https://github.com/tree-sitter-grammars/tree-sitter-properties) | —                              |
 
-## Vendored ZenScript grammar
+## ZenScript grammar
 
-The upstream `ikexing-cn/tree-sitter-zenscript` repository is a
-work in progress. As of the commit we pin in `extension.toml`, the
-`class_declaration` rule was `choice('todo1')` and `_expression` was
+The upstream [`ikexing-cn/tree-sitter-zenscript`](https://github.com/ikexing-cn/tree-sitter-zenscript)
+repository is a work in progress. As of the commit it was forked from,
+the `class_declaration` rule was `choice('todo1')` and `_expression` was
 `choice('todo4')`, which means complex expressions fall to `ERROR`
-nodes. We vendor the grammar at `vendor/tree-sitter-zenscript/` and
-complete the missing pieces. The completion is grounded in the
-official [`CraftTweaker/ZenScript`](https://github.com/CraftTweaker/ZenScript)
-Java parser (clone it locally to inspect token sets, operator
-precedence, and statement grammar — see `ZenTokener.java`,
-`parser/expression/ParsedExpression.java`, and
-`statements/Statement.java`), which we treat as the source of truth.
+nodes. The fork at
+[`Copernicium282/tree-sitter-zenscript`](https://github.com/Copernicium282/tree-sitter-zenscript)
+completes the missing pieces, grounded in the official
+[`CraftTweaker/ZenScript`](https://github.com/CraftTweaker/ZenScript)
+Java parser (see `ZenTokener.java`, `parser/expression/ParsedExpression.java`,
+and `statements/Statement.java` for token sets, operator precedence,
+and statement grammar), which we treat as the source of truth.
 
-The vendored grammar adds:
+The fork adds:
 
 - A full expression grammar with explicit precedence levels: `=`, `?:`, `||`,
   `&&`, `|`, `^`, `&`, `==`/`!=`/`<`/`<=`/`>`/`>=`/`in`/`has`, `+`/`-`/`~`
@@ -190,8 +189,9 @@ MIT — see [`LICENSE`](LICENSE).
 
 Third-party:
 
-- `vendor/tree-sitter-zenscript/` — MIT (upstream `ikexing-cn`),
-  with our additions under the same MIT license as this extension.
+- `Copernicium282/tree-sitter-zenscript` — MIT (fork of upstream
+  `ikexing-cn`), with our additions under the same MIT license as
+  this extension.
 - `dumpers/dumper_*.zs` — MIT, from
   `Blue-Beaker/zenscript-bracket-completion`.
 - `tree-sitter-properties` — MIT.
@@ -205,7 +205,7 @@ The grammar and LSP have been validated against:
   [Nuclear Tech: Reborn modpack](https://www.curseforge.com/minecraft/modpacks/nuclear-tech-reborn/files/7442534)
   — 32 `.zs` files, ~70 KB, mix of CraftTweaker and NuclearCraft
   recipes, JEI integration, and complex expressions — all parse
-  with **zero ERROR nodes** against the vendored grammar.
+  with **zero ERROR nodes** against the fork.
 - Four additional sanitized real-world fixture scripts covering
   recipe remapping, waste processing, fluid mechanics, and alloy
   crafting — all parse with **zero ERROR nodes**.
