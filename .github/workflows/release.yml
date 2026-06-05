@@ -74,21 +74,17 @@ jobs:
           ${{ matrix.cross && format('{0}-strip', matrix.cross) || 'strip' }} \
             "target/${{ matrix.target }}/release/zsbc-lsp"
 
-      - name: Package (unix)
-        if: matrix.archive == 'gz'
+      - name: Prepare binary for upload
         run: |
-          cd "target/${{ matrix.target }}/release"
-          tar -czf "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.tar.gz" zsbc-lsp
-
-      - name: Package (windows)
-        if: matrix.archive == 'exe'
-        shell: bash
-        run: |
-          mv "target/${{ matrix.target }}/release/zsbc-lsp.exe" "${{ github.workspace }}/zsbc-lsp-${{ matrix.target }}.exe"
+          if [ "${{ matrix.archive }}" = "gz" ]; then
+            cp "target/${{ matrix.target }}/release/zsbc-lsp" "zsbc-lsp-${{ matrix.target }}"
+          else
+            cp "target/${{ matrix.target }}/release/zsbc-lsp.exe" "zsbc-lsp-${{ matrix.target }}.exe"
+          fi
 
       - name: Upload asset
         uses: softprops/action-gh-release@v3
         with:
-          files: zsbc-lsp-${{ matrix.target }}.*
+          files: zsbc-lsp-${{ matrix.target }}*
           fail_on_unmatched_files: true
           overwrite_files: true
