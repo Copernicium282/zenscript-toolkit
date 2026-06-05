@@ -8,8 +8,8 @@ repository = "https://github.com/Copernicium282/zenscript-toolkit"
 license = "MIT"
 
 [grammars.zenscript]
-repository = "https://github.com/ikexing-cn/tree-sitter-zenscript"
-path = "vendor/tree-sitter-zenscript"
+repository = "https://github.com/Copernicium282/tree-sitter-zenscript"
+rev = "main"
 
 [grammars.properties]
 repository = "https://github.com/tree-sitter-grammars/tree-sitter-properties"

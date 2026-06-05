@@ -11,12 +11,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 - Initial release.
 - ZenScript language support: syntax highlighting, indent rules, and
-  code-folding driven by the vendored `tree-sitter-zenscript` grammar.
+  code-folding driven by the `Copernicium282/tree-sitter-zenscript`
+  grammar (fork of `ikexing-cn/tree-sitter-zenscript`).
 - Minecraft `.lang` language support via `tree-sitter-properties`.
 - ZSBC bracket-handler completions and hover, served by a Rust LSP
   server (`zsbc-lsp`) downloaded from this repo's GitHub releases on
   first activation.
-- Vendored ZenScript grammar completed against the official
+- Forked ZenScript grammar completed against the official
   `CraftTweaker/ZenScript` Java parser: full expression precedence,
   classes, constructors, lambdas, `version N;`, `has` operator.
 - Release workflow: `git tag vX.Y.Z` triggers a GitHub Actions matrix

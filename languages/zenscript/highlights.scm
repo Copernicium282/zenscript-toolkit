@@ -1,49 +1,89 @@
 ; ZenScript — syntax highlighting queries.
 ;
-; Grammar: ikexing-cn/tree-sitter-zenscript (vendored, completed)
-;   grammar.js is the source of truth for node names; the queries below
-;   reference every named node that benefits from a distinct capture.
+; Grammar: Copernicium282/tree-sitter-zenscript (fork of ikexing-cn)
+;   grammar.js is the source of truth for node names; node-types.json
+;   is the source of truth for field names. The queries below use
+;   `field: (_)` to address fields, not `(field)`, which would try
+;   to match a non-existent named node.
+;
+; Capture names are chosen to reproduce the colors VS Code's
+; yesterday17/zenscript grammar gives when rendered under the
+; 2026 Dark theme. The mapping is documented inline next to each
+; pattern, e.g. `import_declaration` assigns `keyword.other.import`
+; in TextMate, which falls back to `keyword` (#ff7b72) in 2026 Dark,
+; so the capture here is `@keyword.import`.
+;
+; IMPORTANT: tree-sitter applies captures with LAST-MATCH-WINS
+; semantics — if multiple patterns match the same node, the one
+; appearing later in the file takes effect. The generic
+; `(identifier) @variable` catch-all is therefore placed at the
+; TOP of the file so the more specific captures below (e.g.
+; `class_declaration` naming its `@type`) override it.
+
+; --- Identifiers (catch-all) -----------------------------------------------
+; Painted first so the more specific captures below override it.
+(identifier) @variable
 
 ; --- Comments --------------------------------------------------------------
 (comment) @comment
 
 ; --- Imports ---------------------------------------------------------------
+; `import` is `keyword.other.import.zenscript` (VS Code) → falls back to
+; `keyword` in 2026 Dark → @keyword.import (#ff7b72).
 (import_declaration
-  "import" @keyword.control.import
+  "import" @keyword.import)
+
+(import_declaration
   (qualified_name
-    name: (identifier) @namespace)
-  (as) @keyword.control
+    name: (identifier) @namespace))
+
+(import_declaration
+  (as) @keyword.operator)
+
+(import_declaration
   (identifier) @namespace)
 
 ; --- Classes ---------------------------------------------------------------
+; `zenClass` / `frigginClass` are `keyword.other.class.zenscript` (VS Code)
+; → falls back to `keyword` → @keyword.declaration (#ff7b72).
 (class_declaration
-  [
+  keyword: [
     "zenClass"
     "frigginClass"
-  ] @keyword.control
-  (identifier) @type)
+  ] @keyword.declaration
+  name: (identifier) @type)
 
 (constructor_declaration
-  [
+  keyword: [
     "zenConstructor"
     "frigginConstructor"
-  ] @keyword.control)
+  ] @keyword.declaration)
 
 ; --- Functions -------------------------------------------------------------
+; `function` is `storage.type.function.zenscript` (VS Code) → falls back to
+; `storage` → @keyword.declaration (#ff7b72).
 (function_declaration
-  "function" @keyword.control
-  (identifier) @function
-  (as) @keyword.control
-  (return_type) @type)
+  "function" @keyword.declaration
+  name: (identifier) @function
+  (as) @keyword.operator
+  return_type: (_) @type)
+
+; Highlight `static` on a function declaration separately because
+; mixing it into the pattern above makes the query "impossible"
+; (optional siblings that the parser cannot order).
+(function_declaration
+  (static) @keyword.declaration)
 
 (expand_function_declaration
-  "$expand" @keyword.control
+  "$expand" @keyword.declaration
   (identifier) @function)
 
 (lambda_expression
-  "function" @keyword.control)
+  "function" @keyword.declaration)
 
 ; --- Statements / control flow ---------------------------------------------
+; `if`/`else` are `keyword.control.conditional.zenscript` (VS Code) → falls
+; back to `keyword.control` → @keyword.control.conditional (#c586c0).
 (if_statement
   [
     "if"
@@ -66,25 +106,42 @@
 ] @keyword.control.return
 
 ; --- Version preprocessor-style statement ----------------------------------
+; `version` is part of `meta.preprocessor.zenscript` (VS Code) → falls back
+; to `meta.preprocessor` → @preproc (#569cd6).
 (version_statement
-  "version" @keyword.control)
+  "version" @preproc)
 
 ; --- Variable declarations -------------------------------------------------
+; `var`/`val` are `storage.type.var` (VS Code) → falls back to `storage`
+; → @keyword.declaration (#ff7b72). `static`/`global` are
+; `storage.modifier.{static,global}` → `storage.modifier` (no language-
+; specific override) → @keyword.declaration (#ff7b72) — VS Code would
+; render these #569cd6, but the closest semantically-correct capture
+; here maps to the same generic-storage color the rest of the prefix
+; group gets.
 (variable_declaration
-  [
+  prefix: [
     "var"
     "val"
-    "static"
-    "global"
-  ] @keyword.control
-  (identifier) @variable
-  (as) @keyword.control
-  (initializer) @variable)
+  ] @keyword.declaration
+  name: (identifier) @variable)
+
+(variable_declaration
+  (static) @keyword.declaration)
+
+(variable_declaration
+  (global) @keyword.declaration)
+
+(variable_declaration
+  (as) @keyword.operator)
+
+(variable_declaration
+  initializer: (_) @variable)
 
 ; --- Function parameters ---------------------------------------------------
 (formal_parameter
   (identifier) @variable.parameter
-  (as) @keyword.control)
+  (as) @keyword.operator)
 
 ; --- Types -----------------------------------------------------------------
 (class_type
@@ -95,7 +152,7 @@
 
 (function_type
   "function" @keyword.control.type
-  (return_type) @type)
+  return_type: (_) @type)
 
 (list_type
   (_) @type)
@@ -103,10 +160,17 @@
 (array_type
   (_) @type)
 
+; `map_type` has overlapping `key`/`value` fields (both
+; `_type_literal`); a query that names both fields with `_` is rejected
+; by the tree-sitter query compiler as impossible. Anchor the two
+; captures to the order the grammar emits them in.
 (map_type
-  (key: (_) @type)
-  (value: (_) @type))
+  (_) @type
+  .
+  (_) @type)
 
+; Primitive types (any, bool, byte, …) are `constant.other.type.zenscript`
+; (VS Code) → falls back to `constant` → @type.builtin (#79c0ff).
 (primitive_type) @type.builtin
 
 ; --- Expressions -----------------------------------------------------------
@@ -131,7 +195,11 @@
 (map_entry
   ":" @punctuation.delimiter)
 
-; Bracket handlers — the `<item:minecraft:diamond>` syntax
+; Bracket handlers — `<item:minecraft:diamond>` syntax. The angle brackets
+; themselves are `variable.language.brackethandler.zenscript` (VS Code) →
+; falls back to `variable.language` → @punctuation.special. The interior
+; is `variable.parameter.brackethandler.zenscript` → falls back to
+; `variable.parameter` → @variable.parameter.
 (bracket_handler
   "<" @punctuation.special
   ">" @punctuation.special)
@@ -139,11 +207,11 @@
 ; Member access
 (member_access_expression
   "." @punctuation.delimiter
-  (property) @property)
+  property: (_) @property)
 
 ; Function calls
 (call_expression
-  (function) @function)
+  function: (_) @function)
 
 ; Indexing
 (index_expression
@@ -152,22 +220,20 @@
 
 ; Casts
 (type_cast_expression
-  (value) @variable
-  "as" @keyword.control
-  (type) @type)
+  value: (_) @variable
+  "as" @keyword.operator
+  type: (_) @type)
 
 (instanceof_expression
-  (value) @variable
-  "instanceof" @keyword.control
-  (type) @type)
+  value: (_) @variable
+  "instanceof" @keyword.operator
+  type: (_) @type)
 
 ; Range
 (range_expression
-  (start) @variable
-  [
-    ".."
-  ] @operator
-  (end) @variable)
+  start: (_) @variable
+  operator: [".."] @operator
+  end: (_) @variable)
 
 ; Ternary
 (ternary_expression
@@ -178,19 +244,13 @@
 
 ; Assignment
 (assignment_expression
-  (operator) @operator)
+  operator: [
+    "%=" "&=" "*=" "+=" "-=" "/=" "=" "^=" "|=" "~="
+  ] @operator)
 
 ; Unary
 (unary_expression
-  (operator) @operator)
-
-; Binary
-(binary_expression
-  (operator) @operator)
-
-; --- Identifiers (catch-all) -----------------------------------------------
-; Painted last so the more specific captures above take priority.
-(identifier) @variable
+  operator: ["!" "-"] @operator)
 
 ; --- Brackets / punctuation ------------------------------------------------
 [

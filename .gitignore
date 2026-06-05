@@ -1,1 +1,4 @@
 target/
+lsp-server/target/
+extension.wasm
+grammars/
